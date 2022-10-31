@@ -17,15 +17,36 @@ def alignmentmark(px, py):
     cross = gdspy.boolean(box1, box2, "or")
     cell.add(cross)
 
+def EBL_alignmentmark(px, py):
+    box1 = gdspy.Rectangle((-0.5 + px,2 + py), (0.5 + px,5 + py))
+    box2 = gdspy.Rectangle((-0.5 + px,-2 + py),(0.5 + px,-5 + py))
+    box3 = gdspy.Rectangle((-5 + px,0.5 + py),(-2 + px,-0.5 + py))
+    box4 = gdspy.Rectangle((5 + px, 0.5 + py), (2 + px, -0.5 + py))
+    b1 = gdspy.Rectangle((-2 + px,0.05 + py),(2 + px,-0.05 + py))
+    b2 = gdspy.Rectangle((0.05 + px,-2 + py),(-0.05 + px,2 + py))
+    cross1 = gdspy.boolean(box1, box2, "or")
+    cross2 = gdspy.boolean(box3, box4, "or")
+    cross3 = gdspy.boolean(b1, b2, "or")
+    cross = gdspy.boolean(cross1, cross2, "or")
+    cross = gdspy.boolean(cross, cross3, "or")
+    cell.add(cross)
+
 #creates a single pillar at px, py with a diameter of dia
-def one_pillar(px, py, dia, label = None):
+def one_pillar(px, py, dia, label = None, writefield = 100):
     pillar = gdspy.Round((px, py), dia/2, tolerance=0.001)
     label = gdspy.Text(label, 4, (px - 15, py - dia -20))
+    if not writefield == None:
+        wp = 10 #writefield padding
+        EBL_alignmentmark(px + -writefield/2 + wp,py + -writefield/2 + wp)
+        EBL_alignmentmark(px + -writefield / 2 + wp,py +  writefield / 2 - wp)
+        EBL_alignmentmark(px + writefield / 2 - wp,py +  writefield / 2 - wp)
+        EBL_alignmentmark(px + writefield / 2 - wp,py +  -writefield / 2 + wp)
     cell.add(label)
     cell.add(pillar)
 
+
 #creates an m by n array of pillars centered at px, py with step sizes of sx, sy
-def pillar_array(px, py, sx, sy, m, n, dia, label_var = None):
+def pillar_array(px, py, sx, sy, m, n, dia, label_var = None, writefield = None):
     px = px - (sx * m)
     py = py - (sy * n)
     i = -1
@@ -36,53 +57,25 @@ def pillar_array(px, py, sx, sy, m, n, dia, label_var = None):
             label = str(i) + "," + str(j) + "," + str(dia) + "um"
             if label_var == "NoLabel":
                 label = ""
-            one_pillar(px/2 + j * sx, py/2 + i * sy, dia, label)
+            one_pillar(px/2 + j * sx, py/2 + i * sy, dia, label, writefield = writefield)
             j = j + 1
 
-def double_injector_array(px, py, sx, sy, m, n, dia, pilsep):
-    pillar_array(px - pilsep/2, py, sx, sy, m, n, dia)
-    pillar_array(px + pilsep/2, py, sx, sy, m, n, dia, "NoLabel")
+def double_injector_array(px, py, sx, sy, m, n, dia, pilsep, writefield):
+    pillar_array(px - pilsep/2, py, sx, sy, m, n, dia, writefield=writefield)
+    pillar_array(px + pilsep/2, py, sx, sy, m, n, dia, "NoLabel", writefield=None)
 
-def triple_injector_array(px, py, sx, sy, m, n, dia, pilsep):
-    pillar_array(px - pilsep/2, py, sx, sy, m, n, dia)
-    pillar_array(px + pilsep/2, py, sx, sy, m, n, dia, "NoLabel")
-    pillar_array(px, py + pilsep*np.sqrt(3)/2, sx, sy, m, n, dia, "NoLabel")
+def triple_injector_array(px, py, sx, sy, m, n, dia, pilsep, writefield):
+    pillar_array(px - pilsep/2, py, sx, sy, m, n, dia, writefield=writefield)
+    pillar_array(px + pilsep/2, py, sx, sy, m, n, dia, "NoLabel", writefield=None)
+    pillar_array(px, py + pilsep*np.sqrt(3)/2, sx, sy, m, n, dia, "NoLabel", writefield=None)
 
-def quad_injector_array(px, py, sx, sy, m, n, dia, pilsep):
-    pillar_array(px - pilsep/2, py + pilsep/2, sx, sy, m, n, dia)
-    pillar_array(px + pilsep/2, py - pilsep/2, sx, sy, m, n, dia, "NoLabel")
-    pillar_array(px - pilsep/2, py - pilsep/2, sx, sy, m, n, dia, "NoLabel")
-    pillar_array(px + pilsep/2, py + pilsep/2, sx, sy, m, n, dia, "NoLabel")
+def quad_injector_array(px, py, sx, sy, m, n, dia, pilsep, writefield):
+    pillar_array(px - pilsep/2, py + pilsep/2, sx, sy, m, n, dia, writefield=writefield)
+    pillar_array(px + pilsep/2, py - pilsep/2, sx, sy, m, n, dia, "NoLabel", writefield=None)
+    pillar_array(px - pilsep/2, py - pilsep/2, sx, sy, m, n, dia, "NoLabel", writefield=None)
+    pillar_array(px + pilsep/2, py + pilsep/2, sx, sy, m, n, dia, "NoLabel", writefield=None)
 
-#create your GDS file
-alignmentmark(-5000, -5000)
-alignmentmark(5000, -5000)
-alignmentmark(-5000, 5000)
-alignmentmark(5000, 5000)
 
-pillar_array(0,500,1000,1000,8,8,40)
-pillar_array(500,500,1000,1000,8,8,10)
-pillar_array(1000,500,1000,1000,8,8,5)
-pillar_array(1500,500,1000,1000,8,8,3)
-
-pillar_array(0,0,1000,1000,8,8,1)
-pillar_array(500,0,1000,1000,8,8,0.5)
-pillar_array(1000,0,1000,1000,8,8,0.3)
-pillar_array(1500,0,1000,1000,8,8,0.2)
-
-triple_injector_array(0,-500,1000,1000,8,8,3,12)
-triple_injector_array(500,-500,1000,1000,8,8,1,8)
-triple_injector_array(1000,-500,1000,1000,8,8,0.5,4)
-triple_injector_array(1500,-500,1000,1000,8,8,0.3,2)
-
-quad_injector_array(0,-1000,1000,1000,8,8,3,12)
-quad_injector_array(500,-1000,1000,1000,8,8,1,8)
-quad_injector_array(1000,-1000,1000,1000,8,8,0.5,4)
-quad_injector_array(1500,-1000,1000,1000,8,8,0.3,2)
-
-# Save the library in a file called 'first.gds'.
-lib.write_gds('Alignment_Calibration_new.gds')
-print('meow')
 
 
 
